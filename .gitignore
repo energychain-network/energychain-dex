@@ -1,0 +1,37 @@
+# Go
+api/bin/
+indexer/bin/
+*.exe
+*.test
+*.out
+*.prof
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+build/
+.turbo/
+.cache/
+coverage/
+tsconfig.tsbuildinfo
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# Lockfiles regenerated on install
+package-lock.json
+yarn.lock
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

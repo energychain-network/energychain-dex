@@ -1,0 +1,173 @@
+# Isolated DEX stack. Brought up alongside the explorer stack but with its own
+# Postgres / Redis / nginx so we can roll either side back independently.
+
+services:
+  postgres:
+    image: timescale/timescaledb:2.16.1-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: UTC
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=timescaledb"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=512MB"
+      - "-c"
+      - "work_mem=32MB"
+    volumes:
+      - dex-pgdata:/var/lib/postgresql/data
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60 1000"]
+    volumes:
+      - dex-redisdata:/data
+    ports:
+      - "56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 30
+
+  migrate:
+    image: migrate/migrate:v4.17.1
+    profiles: ["migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
+      - "up"
+
+  indexer:
+    build:
+      context: ../indexer
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DEX_PG_DSN: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      DEX_REDIS_ADDR: redis:6379
+      DEX_CHAIN_ID: ${DEX_CHAIN_ID}
+      DEX_EVM_RPC: ${DEX_EVM_RPC}
+      DEX_EVM_WS: ${DEX_EVM_WS}
+      DEX_FACTORY: ${DEX_FACTORY}
+      DEX_ROUTER: ${DEX_ROUTER}
+      DEX_WECY: ${DEX_WECY}
+      DEX_INDEXER_START_HEIGHT: ${DEX_INDEXER_START_HEIGHT}
+      DEX_INDEXER_BATCH_SIZE: ${DEX_INDEXER_BATCH_SIZE}
+      DEX_INDEXER_CONFIRMATIONS: ${DEX_INDEXER_CONFIRMATIONS}
+      DEX_INDEXER_TICK_INTERVAL: ${DEX_INDEXER_TICK_INTERVAL}
+      DEX_PROM_LISTEN: :9100
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "9100:9100"
+
+  api:
+    build:
+      context: ../api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DEX_PG_DSN: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      DEX_REDIS_ADDR: redis:6379
+      DEX_API_LISTEN: :8081
+      DEX_API_CORS_ORIGINS: ${DEX_API_CORS_ORIGINS:-*}
+      DEX_API_RATE_PUBLIC: ${DEX_API_RATE_PUBLIC}
+      DEX_API_RATE_PARTNER: ${DEX_API_RATE_PARTNER}
+      DEX_CHAIN_ID: ${DEX_CHAIN_ID}
+      DEX_EVM_RPC: ${DEX_EVM_RPC}
+      DEX_FACTORY: ${DEX_FACTORY}
+      DEX_ROUTER: ${DEX_ROUTER}
+      DEX_WECY: ${DEX_WECY}
+      DEX_PROM_LISTEN: :9101
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "8081:8081"
+      - "9101:9101"
+
+  web:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_DEX_API_BASE: ${NEXT_PUBLIC_DEX_API_BASE}
+        NEXT_PUBLIC_DEX_WS: ${NEXT_PUBLIC_DEX_WS}
+        NEXT_PUBLIC_DEX_CHAIN_ID: ${NEXT_PUBLIC_DEX_CHAIN_ID}
+        NEXT_PUBLIC_DEX_RPC: ${NEXT_PUBLIC_DEX_RPC}
+        NEXT_PUBLIC_WC_PROJECT_ID: ${NEXT_PUBLIC_WC_PROJECT_ID}
+        NEXT_PUBLIC_DEX_FACTORY: ${DEX_FACTORY}
+        NEXT_PUBLIC_DEX_ROUTER: ${DEX_ROUTER}
+        NEXT_PUBLIC_DEX_WECY: ${DEX_WECY}
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "3001:3000"
+
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - dex-promdata:/prometheus
+    ports:
+      - "9091:9090"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-dex}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      # Provisioning paths are baked-in; the volumes below mount our
+      # version-controlled datasources and dashboards into them so a
+      # fresh container comes up with the EnergySwap dashboard preloaded.
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    ports:
+      - "3002:3000"
+    volumes:
+      - dex-grafana:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on: [api, web]
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8080:80"
+
+volumes:
+  dex-pgdata:
+  dex-redisdata:
+  dex-promdata:
+  dex-grafana:

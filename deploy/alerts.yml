@@ -1,0 +1,44 @@
+groups:
+  - name: dex-indexer
+    interval: 30s
+    rules:
+      - alert: DexIndexerStalled
+        expr: time() - dex_indexer_last_block_time_seconds > 120
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: "DEX indexer has not advanced in >2m"
+          description: "Last processed block was {{ $value }}s ago."
+
+      - alert: DexIndexerLagHigh
+        expr: dex_indexer_chain_head - dex_indexer_processed_height > 200
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: "DEX indexer is >200 blocks behind chain head"
+
+      - alert: DexReorgDeep
+        expr: dex_indexer_reorg_depth > 8
+        for: 0m
+        labels: { severity: page }
+        annotations:
+          summary: "Reorg depth >8 detected"
+
+  - name: dex-api
+    interval: 30s
+    rules:
+      - alert: DexApiHighErrorRate
+        expr: |
+          sum(rate(dex_api_http_requests_total{status=~"5.."}[5m]))
+            / sum(rate(dex_api_http_requests_total[5m])) > 0.02
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: "DEX API 5xx ratio >2%"
+
+      - alert: DexApiP99Latency
+        expr: histogram_quantile(0.99, sum(rate(dex_api_http_duration_seconds_bucket[5m])) by (le)) > 0.5
+        for: 10m
+        labels: { severity: warn }
+        annotations:
+          summary: "DEX API p99 latency >500ms"

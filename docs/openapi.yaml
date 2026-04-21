@@ -1,0 +1,231 @@
+openapi: 3.1.0
+info:
+  title: EnergyChain DEX API
+  version: 1.0.0
+  description: |
+    Read-mostly REST and WebSocket API powering the EnergyChain DEX frontend
+    and third-party integrations. All numeric fields that may exceed the safe
+    integer range are returned as decimal strings.
+  contact:
+    name: EnergyChain core
+servers:
+  - url: https://dex.example.com/api/v1
+    description: Production
+  - url: http://localhost:8081/api/v1
+    description: Local
+
+components:
+  parameters:
+    Limit:
+      in: query
+      name: limit
+      schema: { type: integer, minimum: 1, maximum: 500, default: 50 }
+    Offset:
+      in: query
+      name: offset
+      schema: { type: integer, minimum: 0, default: 0 }
+    Granularity:
+      in: query
+      name: granularity
+      schema: { type: string, enum: [1m, 5m, 15m, 1h, 4h, 1d, 1w], default: 5m }
+  schemas:
+    Overview:
+      type: object
+      required: [chain_id, pairs, tokens, volume_usd_24h, tvl_usd, trades_24h, updated_at]
+      properties:
+        chain_id: { type: integer }
+        pairs: { type: integer }
+        tokens: { type: integer }
+        volume_usd_24h: { type: string, description: USD volume over the last 24h. }
+        tvl_usd: { type: string }
+        trades_24h: { type: integer }
+        updated_at: { type: integer, format: int64 }
+    Pair:
+      type: object
+      required: [address, token0, token1, reserve0, reserve1]
+      properties:
+        address: { type: string }
+        token0: { type: string }
+        token1: { type: string }
+        symbol0: { type: string }
+        symbol1: { type: string }
+        reserve0: { type: string }
+        reserve1: { type: string }
+        volume_usd_24h: { type: string }
+        fees_usd_24h: { type: string }
+        tvl_usd: { type: string }
+        apr_24h: { type: string }
+        price0_usd: { type: string }
+        price1_usd: { type: string }
+        created_height: { type: integer, format: int64 }
+        created_at: { type: integer, format: int64 }
+    Candle:
+      type: object
+      required: [t, o, h, l, c, v, v_usd, n]
+      properties:
+        t: { type: integer, format: int64, description: Unix seconds (bucket start). }
+        o: { type: string } ; h: { type: string } ; l: { type: string } ; c: { type: string }
+        v: { type: string, description: Token0 base-units volume. }
+        v_usd: { type: string }
+        n: { type: integer }
+    Token:
+      type: object
+      required: [address, symbol, decimals]
+      properties:
+        address: { type: string }
+        symbol: { type: string }
+        name: { type: string }
+        decimals: { type: integer }
+        total_supply: { type: string }
+        wrapped_native: { type: boolean }
+        stablecoin: { type: boolean }
+        trust_score: { type: integer }
+        price_usd: { type: string }
+        volume_usd_24h: { type: string }
+    QuoteRequest:
+      type: object
+      required: [token_in, token_out, amount_in]
+      properties:
+        token_in: { type: string }
+        token_out: { type: string }
+        amount_in: { type: string, description: Base-units integer. }
+        max_hops: { type: integer, minimum: 1, maximum: 4, default: 3 }
+    Quote:
+      type: object
+      required: [token_in, token_out, amount_in, amount_out, path, pairs, hops, fee_bps_total]
+      properties:
+        token_in: { type: string }
+        token_out: { type: string }
+        amount_in: { type: string }
+        amount_out: { type: string }
+        price_impact: { type: string }
+        path: { type: array, items: { type: string } }
+        pairs: { type: array, items: { type: string } }
+        hops: { type: integer }
+        fee_bps_total: { type: integer }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+
+paths:
+  /overview:
+    get:
+      summary: Aggregate DEX KPIs.
+      responses:
+        '200':
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/Overview' } } }
+  /pairs:
+    get:
+      summary: List trading pairs.
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - in: query
+          name: sort
+          schema: { type: string, enum: [tvl, volume, apr, new], default: tvl }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Pair' } }
+                  limit: { type: integer }
+                  offset: { type: integer }
+  /pairs/{address}:
+    get:
+      summary: Pair detail.
+      parameters:
+        - in: path
+          name: address
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Pair' } } } }
+        '404': { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /pairs/{address}/candles:
+    get:
+      summary: OHLCV candles for the pair.
+      parameters:
+        - in: path
+          name: address
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/Granularity'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Candle' } }
+                  granularity: { type: string }
+  /pairs/{address}/swaps:
+    get:
+      summary: Recent swaps for the pair.
+      parameters:
+        - in: path
+          name: address
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { description: OK }
+  /swaps:
+    get:
+      summary: Recent swaps across all pairs.
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { description: OK }
+  /tokens:
+    get:
+      summary: List tokens with at least one liquidity pool.
+      parameters: [ { $ref: '#/components/parameters/Limit' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Token' } }
+  /tokens/{address}:
+    get:
+      summary: Token detail.
+      parameters: [ { in: path, name: address, required: true, schema: { type: string } } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Token' } } } }
+        '404': { description: Not found }
+  /quote:
+    post:
+      summary: Server-side multi-hop swap quote.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuoteRequest' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Quote' } } } }
+        '404': { description: No route found }
+  /portfolio/{owner}:
+    get:
+      summary: LP positions and trade history for an address.
+      parameters: [ { in: path, name: owner, required: true, schema: { type: string } } ]
+      responses:
+        '200': { description: OK }
+  /search:
+    get:
+      summary: Cross-entity search (tokens / pairs / tx hashes).
+      parameters: [ { in: query, name: q, required: true, schema: { type: string, minLength: 2 } } ]
+      responses:
+        '200': { description: OK }
