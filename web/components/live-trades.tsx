@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useChannelStream } from '@/lib/ws';
 import { api } from '@/lib/api';
+import { txURL } from '@/lib/chain';
 import { displayPair, fmtUSD, shortAddr, timeAgo } from '@/lib/format';
 
 type SwapEvent = {
@@ -90,7 +91,7 @@ export function LiveTrades({ initial = [] as any[], max = 30 }: { initial?: any[
                 <td className="px-4 py-2 text-ink-100">{fmtUSD(s.amount_usd)}</td>
                 <td className="px-4 py-2 mono text-xs text-ink-300">{shortAddr(s.sender, 4)}</td>
                 <td className="px-4 py-2 text-right">
-                  <a className="mono text-xs text-ink-400 hover:text-ink-200" href={`${process.env.NEXT_PUBLIC_DEX_EXPLORER_URL || 'http://localhost:3000'}/tx/${s.tx}`} target="_blank" rel="noreferrer">
+                  <a className="mono text-xs text-ink-400 hover:text-ink-200" href={txURL(s.tx)} target="_blank" rel="noreferrer">
                     {shortAddr(s.tx, 4)}
                   </a>
                 </td>

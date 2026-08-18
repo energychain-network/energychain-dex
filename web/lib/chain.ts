@@ -8,7 +8,16 @@ import { defineChain } from 'viem';
 // local devnets can still point elsewhere.
 const CHAIN_ID = Number(process.env.NEXT_PUBLIC_DEX_CHAIN_ID || 9001);
 const RPC = process.env.NEXT_PUBLIC_DEX_RPC || 'http://localhost:8545';
-const EXPLORER = process.env.NEXT_PUBLIC_EXPLORER_BASE || 'http://localhost:3000';
+
+// Single source for outbound explorer links. NEXT_PUBLIC_DEX_EXPLORER_URL is
+// accepted as well because parts of the UI used to read that name, and a deploy
+// that set only one of the two left the other pointing at localhost.
+export const EXPLORER =
+  process.env.NEXT_PUBLIC_EXPLORER_BASE ||
+  process.env.NEXT_PUBLIC_DEX_EXPLORER_URL ||
+  'http://localhost:3000';
+
+export const txURL = (hash: string) => `${EXPLORER}/tx/${hash}`;
 
 export const energyChain = defineChain({
   id: CHAIN_ID,

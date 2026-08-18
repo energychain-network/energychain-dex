@@ -12,7 +12,7 @@ import {
 import { isAddress, parseUnits, formatEther, getAddress } from 'viem';
 import QRCode from 'qrcode';
 import { ERC20_ABI } from '@/lib/abi';
-import { energyChain } from '@/lib/chain';
+import { energyChain, txURL } from '@/lib/chain';
 import {
   displaySymbol,
   fmtNum,
@@ -447,7 +447,7 @@ function SendPanel() {
           {msg}
           {hash && (
             <div className="mt-1 mono text-[10px] text-ink-300">
-              tx: <a className="hover:text-ink-100" href={`${process.env.NEXT_PUBLIC_DEX_EXPLORER_URL || 'http://localhost:3000'}/tx/${hash}`} target="_blank" rel="noreferrer">{hash}</a>
+              tx: <a className="hover:text-ink-100" href={txURL(hash)} target="_blank" rel="noreferrer">{hash}</a>
             </div>
           )}
         </div>

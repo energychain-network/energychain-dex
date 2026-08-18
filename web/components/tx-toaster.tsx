@@ -2,8 +2,7 @@
 
 import { useEffect } from 'react';
 import { useTxStore, type TxStatus } from '@/lib/tx-store';
-
-const EXPLORER = process.env.NEXT_PUBLIC_EXPLORER_BASE || 'http://localhost:3000';
+import { txURL } from '@/lib/chain';
 
 const STATUS_AUTODISMISS_MS: Record<TxStatus, number | null> = {
   pending: null, // never auto-dismiss while in flight
@@ -50,7 +49,7 @@ export function TxToaster() {
   return (
     <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex w-[min(92vw,360px)] flex-col gap-2">
       {toasts.map((t) => {
-        const explorerHref = t.hash ? `${EXPLORER}/tx/${t.hash}` : null;
+        const explorerHref = t.hash ? txURL(t.hash) : null;
         const short = t.hash ? `${t.hash.slice(0, 8)}…${t.hash.slice(-4)}` : null;
         return (
           <div
