@@ -3,8 +3,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAccount, useBalance } from 'wagmi';
+import { Wallet } from 'lucide-react';
 import { api } from '@/lib/api';
 import { displaySymbol, fmtUSD, fromBaseUnits, shortAddr, timeAgo } from '@/lib/format';
+import { NativePortfolioSection } from '@/components/native/native-portfolio';
+import { PageHeader } from '@/components/page-header';
 
 type Position = {
   pair: string; token0: string; token1: string; symbol0: string; symbol1: string;
@@ -40,12 +43,20 @@ export default function PortfolioPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Portfolio</h1>
-          <p className="mt-1 text-sm text-ink-400">Liquidity positions, balances and on-chain trade history.</p>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader
+        icon={Wallet}
+        title={<>持仓 <span className="text-ink-400 font-normal">Portfolio</span></>}
+        subtitle="原生资产组合、合规状态，以及 EVM 流动性头寸与成交历史。"
+      />
+
+      <section className="space-y-3">
+        <h3 className="text-sm uppercase tracking-wider text-ink-400">原生资产 Native (Cosmos)</h3>
+        <NativePortfolioSection />
+      </section>
+
+      <section className="space-y-3 pt-2">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h3 className="text-sm uppercase tracking-wider text-ink-400">DEX (EVM) 流动性与成交</h3>
           <input
             placeholder="Look up any address (0x…)"
             className="input w-72 mono text-xs"
@@ -53,7 +64,7 @@ export default function PortfolioPage() {
             onChange={(e) => setOverrideAddr(e.target.value.trim())}
           />
         </div>
-      </header>
+      </section>
 
       {!isConnected && !overrideAddr && (
         <div className="card p-8 text-center">

@@ -1,0 +1,3 @@
+ALTER TABLE markets DROP COLUMN IF EXISTS operator;
+ALTER TABLE markets DROP COLUMN IF EXISTS bond_amount;
+ALTER TABLE markets DROP COLUMN IF EXISTS bond_denom;

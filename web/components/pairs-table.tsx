@@ -3,7 +3,8 @@ import type { Pair } from '@/lib/api';
 import { displaySymbol, fmtUSD, shortAddr } from '@/lib/format';
 
 export function PairsTable({ items, max }: { items: Pair[]; max?: number }) {
-  const list = max ? items.slice(0, max) : items;
+  const safe = items ?? [];
+  const list = max ? safe.slice(0, max) : safe;
   return (
     <div className="card overflow-hidden">
       <div className="overflow-x-auto">

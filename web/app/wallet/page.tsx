@@ -155,7 +155,7 @@ type TxState = 'idle' | 'estimating' | 'pending' | 'mining' | 'success' | 'error
 function SendPanel() {
   const { address } = useAccount();
   const pc = usePublicClient();
-  const { data: wc } = useWalletClient();
+  const { data: wc } = useWalletClient({ chainId: energyChain.id });
 
   const [token, setToken] = useState<SimpleToken>(NATIVE_TOKEN);
   const [pickerOpen, setPickerOpen] = useState(false);

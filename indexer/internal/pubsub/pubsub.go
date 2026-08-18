@@ -13,6 +13,13 @@ const (
 	ChSwaps       = "dex:swaps"           // every swap (firehose)
 	ChLiquidity   = "dex:liquidity"       // mint/burn events
 	ChCandlesAll  = "dex:candles"         // all candles, JSON includes pair+granularity
+
+	// Native Cosmos module streams.
+	ChOrders      = "dex:orders"          // market order place/cancel
+	ChClears      = "dex:clears"          // market batch clearing prints
+	ChTrades      = "dex:trades"          // mincast mint/melt trades
+	ChIssuance    = "dex:issuance"        // stableusd/rwatoken/offering issuance
+	ChRedemptions = "dex:redemptions"     // stableusd/rwatoken redemptions
 )
 
 type Publisher struct {

@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"energychain/dex/api/internal/cosmos"
 	"energychain/dex/api/internal/metrics"
 	"energychain/dex/api/internal/routing"
 )
@@ -27,6 +28,13 @@ type API struct {
 	Router  *routing.Router
 	ChainID int
 	WECY    string
+
+	// Native Cosmos layer (nil when DEX_COSMOS_ENABLED=false).
+	Cosmos         *cosmos.Client
+	CosmosChainID  string
+	Bech32Prefix   string
+	NativeDenom    string
+	NativeDecimals int
 }
 
 // ---------- common helpers ----------

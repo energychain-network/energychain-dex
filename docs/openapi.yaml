@@ -229,3 +229,160 @@ paths:
       parameters: [ { in: query, name: q, required: true, schema: { type: string, minLength: 2 } } ]
       responses:
         '200': { description: OK }
+
+  # =========================================================================
+  # Native Cosmos modules (资产发行 / 交易 / 结算 / 合规 / 能源)
+  # All numeric on-chain values are decimal strings. Enums are proto names.
+  # =========================================================================
+  /native/config:
+    get:
+      summary: Chain connection params for Keplr/CosmJS (chain id, bech32 prefix, denom).
+      responses: { '200': { description: OK } }
+  /denoms:
+    get:
+      summary: List stableusd settlement denoms.
+      responses: { '200': { description: OK } }
+  /denoms/{id}:
+    get:
+      summary: Stable denom detail.
+      parameters: [ { in: path, name: id, required: true, schema: { type: string } } ]
+      responses: { '200': { description: OK }, '404': { description: Not found } }
+  /denoms/{id}/balance/{addr}:
+    get:
+      summary: Authoritative on-chain free balance for an account (live query).
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+        - { in: path, name: addr, required: true, schema: { type: string } }
+      responses: { '200': { description: OK }, '502': { description: Upstream chain error } }
+  /rwa/tokens:
+    get: { summary: List RWA security tokens., responses: { '200': { description: OK } } }
+  /rwa/tokens/{id}:
+    get:
+      summary: RWA token detail.
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      responses: { '200': { description: OK }, '404': { description: Not found } }
+  /rwa/tokens/{id}/distributions:
+    get:
+      summary: Dividend/return distributions for a token.
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      responses: { '200': { description: OK } }
+  /rwa/tokens/{id}/redemptions:
+    get:
+      summary: Redemption requests for a token.
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      responses: { '200': { description: OK } }
+  /markets:
+    get: { summary: List order-book (FBA) markets., responses: { '200': { description: OK } } }
+  /markets/{id}:
+    get:
+      summary: Market detail.
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      responses: { '200': { description: OK }, '404': { description: Not found } }
+  /markets/{id}/orderbook:
+    get:
+      summary: Aggregated bid/ask depth from open orders.
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      responses: { '200': { description: OK } }
+  /markets/{id}/trades:
+    get:
+      summary: Recent uniform-price batch clears for a market.
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Limit'
+      responses: { '200': { description: OK } }
+  /markets/{id}/candles:
+    get:
+      summary: OHLCV candles aggregated from batch clears.
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Granularity'
+        - $ref: '#/components/parameters/Limit'
+      responses: { '200': { description: OK } }
+  /orders/{addr}:
+    get:
+      summary: Open orders for an owner across markets.
+      parameters: [ { in: path, name: addr, required: true, schema: { type: string } } ]
+      responses: { '200': { description: OK } }
+  /mincast/markets:
+    get: { summary: List bonding-curve (mincast) markets., responses: { '200': { description: OK } } }
+  /mincast/markets/{id}:
+    get:
+      summary: Mincast market detail.
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      responses: { '200': { description: OK }, '404': { description: Not found } }
+  /mincast/markets/{id}/quote:
+    get:
+      summary: Live mint/melt preview against the bonding curve.
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+        - { in: query, name: is_mint, schema: { type: boolean, default: true } }
+        - { in: query, name: amount, required: true, schema: { type: string } }
+      responses: { '200': { description: OK }, '502': { description: Upstream chain error } }
+  /mincast/markets/{id}/trades:
+    get:
+      summary: Recent mint/melt trades for a market.
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Limit'
+      responses: { '200': { description: OK } }
+  /offerings:
+    get: { summary: List RWA initial offerings (IRO)., responses: { '200': { description: OK } } }
+  /offerings/{id}:
+    get:
+      summary: Offering detail with subscriptions.
+      parameters: [ { in: path, name: id, required: true, schema: { type: integer } } ]
+      responses: { '200': { description: OK }, '404': { description: Not found } }
+  /identity/accounts/{addr}:
+    get:
+      summary: KYC / accreditation status for an address.
+      parameters: [ { in: path, name: addr, required: true, schema: { type: string } } ]
+      responses: { '200': { description: OK } }
+  /policies/{id}:
+    get:
+      summary: Compliance policy detail.
+      parameters: [ { in: path, name: id, required: true, schema: { type: string } } ]
+      responses: { '200': { description: OK }, '404': { description: Not found } }
+  /identity/evaluate:
+    post:
+      summary: Live compliance pre-check for a transfer (EvaluateTransfer).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [policy_id, from, to, amount]
+              properties:
+                policy_id: { type: string }
+                from: { type: string }
+                to: { type: string }
+                amount: { type: string }
+      responses: { '200': { description: OK }, '502': { description: Upstream chain error } }
+  /assethub/devices:
+    get: { summary: List metering devices., responses: { '200': { description: OK } } }
+  /assethub/devices/{id}/readings:
+    get:
+      summary: Recent readings for a device.
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+        - $ref: '#/components/parameters/Limit'
+      responses: { '200': { description: OK } }
+  /assethub/providers:
+    get: { summary: List bonded data providers., responses: { '200': { description: OK } } }
+  /assethub/topics:
+    get: { summary: List oracle aggregation topics., responses: { '200': { description: OK } } }
+  /native/portfolio/{addr}:
+    get:
+      summary: Cross-module portfolio for a bech32 address (balances, orders, invests, subscriptions).
+      parameters: [ { in: path, name: addr, required: true, schema: { type: string } } ]
+      responses: { '200': { description: OK } }
+  /tx/simulate:
+    post:
+      summary: Proxy to cosmos.tx Simulate (browser signs, server forwards).
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses: { '200': { description: OK }, '502': { description: Upstream chain error } }
+  /tx/broadcast:
+    post:
+      summary: Proxy to cosmos.tx BroadcastTx.
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses: { '200': { description: OK }, '502': { description: Upstream chain error } }

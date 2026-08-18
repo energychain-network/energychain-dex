@@ -9,7 +9,10 @@ export const revalidate = 30;
 // follow-up; this lets users discover where capital is currently most efficient
 // without burning gas on a stake-now button that doesn’t exist yet.
 export default async function FarmPage() {
-  const list = await api.listPairs('apr', 50).catch(() => ({ items: [] as any[] }));
+  const res = await api.listPairs('apr', 50).catch(() => ({ items: [] as any[] }));
+  // Guard against a null `items` payload (EVM API returns {"items": null} when
+  // no AMM pairs are indexed); `.catch` only covers rejections, not null.
+  const list = { items: res.items ?? [] };
   return (
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3">

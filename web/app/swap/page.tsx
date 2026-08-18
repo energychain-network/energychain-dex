@@ -1,12 +1,14 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useAccount, useBalance, usePublicClient, useWalletClient, useReadContract } from 'wagmi';
+import { useAccount, useBalance, usePublicClient, useReadContract } from 'wagmi';
+import { getWalletClient } from 'wagmi/actions';
 import { useSearchParams } from 'next/navigation';
 import { api, type Quote } from '@/lib/api';
 import { displaySymbol, fmtNum, fromBaseUnits, shortAddr, toBaseUnits } from '@/lib/format';
 import { TokenPicker, type SimpleToken } from '@/components/token-picker';
-import { ADDR } from '@/lib/chain';
+import { ADDR, energyChain } from '@/lib/chain';
+import { wagmiConfig } from '@/lib/wagmi';
 import { ERC20_ABI, ROUTER_ABI } from '@/lib/abi';
 import { maxUint256 } from 'viem';
 import { trackTx } from '@/lib/tx-store';
@@ -51,7 +53,6 @@ function SwapPageInner() {
 
   const { address } = useAccount();
   const pc = usePublicClient();
-  const wc = useWalletClient().data;
 
   // Bootstrap default tokens from query params or defaults.
   useEffect(() => {
@@ -128,7 +129,15 @@ function SwapPageInner() {
   }, [quote, slippage]);
 
   async function handleApprove() {
-    if (!wc || !pc || !tokenIn || !address) return;
+    if (!pc || !tokenIn || !address) return;
+    const wc = await getWalletClient(wagmiConfig, { chainId: energyChain.id }).catch(() => null);
+    if (!wc) {
+      setTxState('error');
+      setTxMsg(
+        '无法连接钱包签名：请刷新页面后重试；若使用 OKX，请在扩展里确认已连接本站点，或暂时关闭其它钱包扩展后再连接。',
+      );
+      return;
+    }
     try {
       setTxState('approving'); setTxMsg('Approving token spend…');
       await trackTx({
@@ -154,7 +163,15 @@ function SwapPageInner() {
   }
 
   async function handleSwap() {
-    if (!wc || !pc || !tokenIn || !tokenOut || !quote || !address) return;
+    if (!pc || !tokenIn || !tokenOut || !quote || !address) return;
+    const wc = await getWalletClient(wagmiConfig, { chainId: energyChain.id }).catch(() => null);
+    if (!wc) {
+      setTxState('error');
+      setTxMsg(
+        '无法连接钱包签名：请刷新页面后重试；若使用 OKX，请在扩展里确认已连接本站点，或暂时关闭其它钱包扩展后再连接。',
+      );
+      return;
+    }
     try {
       const path = quote.path.map((p, i) =>
         // Swap-out leg uses WECY where the user picked native.

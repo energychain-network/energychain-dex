@@ -16,6 +16,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"energychain/dex/api/internal/config"
+	cosmoscl "energychain/dex/api/internal/cosmos"
 	"energychain/dex/api/internal/handlers"
 	"energychain/dex/api/internal/metrics"
 	"energychain/dex/api/internal/middleware"
@@ -80,6 +81,14 @@ func main() {
 		Router:  rt,
 		ChainID: cfg.ChainID,
 		WECY:    cfg.WECY,
+	}
+	if cfg.CosmosEnabled {
+		api.Cosmos = cosmoscl.New(cfg.CosmosRPC, cfg.CosmosREST)
+		api.CosmosChainID = cfg.CosmosChainID
+		api.Bech32Prefix = cfg.Bech32Prefix
+		api.NativeDenom = cfg.NativeDenom
+		api.NativeDecimals = cfg.NativeDecimals
+		log.Info().Str("cosmos_rest", cfg.CosmosREST).Msg("native cosmos layer enabled")
 	}
 
 	metrics.MustRegister()
@@ -213,6 +222,66 @@ func main() {
 		r.Post("/apikeys/issue", metrics.Wrap("apikeys.issue", api.APIKeyIssue))
 		r.Post("/apikeys/list", metrics.Wrap("apikeys.list", api.APIKeyList))
 		r.Post("/apikeys/revoke", metrics.Wrap("apikeys.revoke", api.APIKeyRevoke))
+
+		// ---- Native Cosmos modules (资产发行 / 交易 / 结算) -------------
+		r.Get("/native/config", metrics.Wrap("native.config", api.NativeConfig))
+
+		// stableusd (issuance)
+		r.Get("/denoms", metrics.Wrap("denoms.list", api.Denoms))
+		r.Get("/denoms/{id}", metrics.Wrap("denoms.get", api.Denom))
+		r.Get("/denoms/{id}/balance/{addr}", metrics.Wrap("denoms.balance", api.DenomBalance))
+
+		// rwatoken (issuance + settlement)
+		r.Get("/rwa/tokens", metrics.Wrap("rwa.tokens", api.RwaTokens))
+		r.Get("/rwa/tokens/{id}", metrics.Wrap("rwa.token", api.RwaToken))
+		r.Get("/rwa/tokens/{id}/distributions", metrics.Wrap("rwa.distributions", api.RwaDistributions))
+		r.Get("/rwa/tokens/{id}/offering-returns", metrics.Wrap("rwa.offering_returns", api.RwaOfferingReturns))
+		r.Get("/rwa/tokens/{id}/redemptions", metrics.Wrap("rwa.redemptions", api.RwaRedemptions))
+		r.Get("/rwa/tokens/{id}/claimable/{addr}", metrics.Wrap("rwa.claimable", api.RwaClaimable))
+
+		// market (order book trading)
+		r.Get("/markets", metrics.Wrap("markets.list", api.Markets))
+		r.Get("/markets/{id}", metrics.Wrap("markets.get", api.Market))
+		r.Get("/markets/{id}/orderbook", metrics.Wrap("markets.orderbook", api.OrderBook))
+		r.Get("/markets/{id}/trades", metrics.Wrap("markets.trades", api.MarketTrades))
+		r.Get("/markets/{id}/candles", metrics.Wrap("markets.candles", api.MarketCandles))
+		r.Get("/orders/{addr}", metrics.Wrap("orders.byowner", api.OrdersByOwner))
+
+		// mincast (bonding-curve trading)
+		r.Get("/mincast/markets", metrics.Wrap("mincast.markets", api.MincastMarkets))
+		r.Get("/mincast/markets/{id}", metrics.Wrap("mincast.market", api.MincastMarket))
+		r.Get("/mincast/markets/{id}/quote", metrics.Wrap("mincast.quote", api.MincastQuote))
+		r.Get("/mincast/markets/{id}/trades", metrics.Wrap("mincast.trades", api.MincastTrades))
+
+		// offering (IRO募资 / 结算)
+		r.Get("/offerings", metrics.Wrap("offerings.list", api.Offerings))
+		r.Get("/offerings/{id}", metrics.Wrap("offerings.get", api.Offering))
+
+		// bridge (跨链 USDC/USDT -> 本链稳定币 1:1 铸造/销毁)
+		r.Get("/bridge/params", metrics.Wrap("bridge.params", api.BridgeParams))
+		r.Get("/bridge/chains", metrics.Wrap("bridge.chains", api.BridgeChains))
+		r.Get("/bridge/assets", metrics.Wrap("bridge.assets", api.BridgeAssets))
+		r.Get("/bridge/inbounds", metrics.Wrap("bridge.inbounds", api.BridgeInbounds))
+		r.Get("/bridge/outbounds", metrics.Wrap("bridge.outbounds", api.BridgeOutbounds))
+		r.Get("/bridge/net-bridged/{denom}", metrics.Wrap("bridge.net_bridged", api.BridgeNetBridged))
+
+		// identity (compliance)
+		r.Get("/identity/accounts/{addr}", metrics.Wrap("identity.account", api.IdentityAccount))
+		r.Get("/policies/{id}", metrics.Wrap("identity.policy", api.Policy))
+		r.Post("/identity/evaluate", metrics.Wrap("identity.evaluate", api.EvaluateTransfer))
+
+		// assethub (energy data)
+		r.Get("/assethub/devices", metrics.Wrap("assethub.devices", api.AssethubDevices))
+		r.Get("/assethub/devices/{id}/readings", metrics.Wrap("assethub.readings", api.AssethubReadings))
+		r.Get("/assethub/providers", metrics.Wrap("assethub.providers", api.AssethubProviders))
+		r.Get("/assethub/topics", metrics.Wrap("assethub.topics", api.AssethubTopics))
+
+		// cross-module portfolio
+		r.Get("/native/portfolio/{addr}", metrics.Wrap("native.portfolio", api.NativePortfolio))
+
+		// tx simulate / broadcast proxy (browser signs via Keplr/CosmJS)
+		r.Post("/tx/simulate", metrics.Wrap("tx.simulate", api.TxSimulate))
+		r.Post("/tx/broadcast", metrics.Wrap("tx.broadcast", api.TxBroadcast))
 	})
 
 	srv := &http.Server{

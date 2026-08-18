@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAccount, useWalletClient } from 'wagmi';
 import { api, type ApiKeyRow } from '@/lib/api';
 import { shortAddr } from '@/lib/format';
+import { energyChain } from '@/lib/chain';
 
 // Self-service API keys.
 //
@@ -22,7 +23,7 @@ type CachedAuth = {
 
 export default function APIKeysPage() {
   const { address, isConnected } = useAccount();
-  const { data: wc } = useWalletClient();
+  const { data: wc } = useWalletClient({ chainId: energyChain.id });
 
   const [auth, setAuth] = useState<CachedAuth | null>(null);
   const [keys, setKeys] = useState<ApiKeyRow[] | null>(null);

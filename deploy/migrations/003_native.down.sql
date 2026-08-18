@@ -1,0 +1,27 @@
+-- 003_native.down.sql
+DROP TABLE IF EXISTS payment_streams;
+DROP TABLE IF EXISTS bridge_transfers;
+DROP TABLE IF EXISTS assethub_topics;
+DROP TABLE IF EXISTS assethub_readings;
+DROP TABLE IF EXISTS assethub_devices;
+DROP TABLE IF EXISTS assethub_providers;
+DROP TABLE IF EXISTS identity_policies;
+DROP TABLE IF EXISTS identity_accounts;
+DROP TABLE IF EXISTS mincast_trades;
+DROP TABLE IF EXISTS mincast_invests;
+DROP TABLE IF EXISTS mincast_balances;
+DROP TABLE IF EXISTS mincast_markets;
+DROP TABLE IF EXISTS order_events;
+DROP TABLE IF EXISTS market_clears;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS markets;
+DROP TABLE IF EXISTS offering_subscriptions;
+DROP TABLE IF EXISTS offerings;
+DROP TABLE IF EXISTS rwa_redemptions;
+DROP TABLE IF EXISTS rwa_distributions;
+DROP TABLE IF EXISTS rwa_balances;
+DROP TABLE IF EXISTS rwa_tokens;
+DROP TABLE IF EXISTS stable_redemptions;
+DROP TABLE IF EXISTS stable_balances;
+DROP TABLE IF EXISTS stable_denoms;
+DROP TABLE IF EXISTS cosmos_cursor;

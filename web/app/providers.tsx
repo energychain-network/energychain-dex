@@ -5,6 +5,7 @@ import { WagmiProvider } from 'wagmi';
 import { useEffect, useState } from 'react';
 import { wagmiConfig } from '@/lib/wagmi';
 import { useWSStatus } from '@/lib/ws';
+import { CosmosWalletProvider } from '@/lib/cosmos-wallet';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [qc] = useState(
@@ -22,8 +23,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={qc}>
-        <ReconnectRefetcher />
-        {children}
+        <CosmosWalletProvider>
+          <ReconnectRefetcher />
+          {children}
+        </CosmosWalletProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

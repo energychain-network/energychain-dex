@@ -45,6 +45,22 @@ type Config struct {
 	// tokens.logo_url column so the frontend can render real icons instead
 	// of hash-coloured placeholders.
 	LogoBaseURL string
+
+	// --- Native Cosmos layer (x/market, x/stableusd, x/rwatoken, ...) ------
+	// EvmEnabled toggles the legacy EVM Uniswap indexer; CosmosEnabled toggles
+	// the native module indexer. At least one must be on.
+	EvmEnabled    bool
+	CosmosEnabled bool
+	// CosmosRPC is the CometBFT RPC base (block events + heights).
+	CosmosRPC string
+	// CosmosREST is the gRPC-gateway REST base (entity state snapshots).
+	CosmosREST string
+	// CosmosStartHeight is the first height to index when the cursor is empty.
+	CosmosStartHeight int64
+	// CosmosBatchSize bounds the number of blocks processed per tick.
+	CosmosBatchSize int
+	// CosmosSnapshotInterval is how often entity state snapshots are pulled.
+	CosmosSnapshotInterval time.Duration
 }
 
 func Load() (*Config, error) {
@@ -69,11 +85,34 @@ func Load() (*Config, error) {
 		LogLevel:      env("LOG_LEVEL", "info"),
 		VerifiedTokens: splitCSV(strings.ToLower(env("DEX_VERIFIED_TOKENS", ""))),
 		LogoBaseURL:    strings.TrimRight(env("DEX_LOGO_BASE_URL", ""), "/"),
+
+		EvmEnabled:             envBool("DEX_EVM_ENABLED", true),
+		CosmosEnabled:          envBool("DEX_COSMOS_ENABLED", false),
+		CosmosRPC:              strings.TrimRight(env("DEX_COSMOS_RPC", "http://localhost:26657"), "/"),
+		CosmosREST:             strings.TrimRight(env("DEX_COSMOS_REST", "http://localhost:1317"), "/"),
+		CosmosStartHeight:      int64(envInt("DEX_COSMOS_START_HEIGHT", 1)),
+		CosmosBatchSize:        envInt("DEX_COSMOS_BATCH_SIZE", 50),
+		CosmosSnapshotInterval: envDuration("DEX_COSMOS_SNAPSHOT_INTERVAL", 30*time.Second),
 	}
-	if c.Factory == "" {
-		return nil, fmt.Errorf("DEX_FACTORY required")
+	if !c.EvmEnabled && !c.CosmosEnabled {
+		return nil, fmt.Errorf("at least one of DEX_EVM_ENABLED / DEX_COSMOS_ENABLED must be true")
+	}
+	if c.EvmEnabled && c.Factory == "" {
+		return nil, fmt.Errorf("DEX_FACTORY required when DEX_EVM_ENABLED=true")
 	}
 	return c, nil
+}
+
+func envBool(k string, def bool) bool {
+	if v := os.Getenv(k); v != "" {
+		switch strings.ToLower(v) {
+		case "1", "true", "yes", "on":
+			return true
+		case "0", "false", "no", "off":
+			return false
+		}
+	}
+	return def
 }
 
 func env(k, def string) string {

@@ -20,6 +20,15 @@ type Config struct {
 	Router       string
 	WECY         string
 	LogLevel     string
+
+	// Native Cosmos layer.
+	CosmosEnabled  bool
+	CosmosRPC      string // CometBFT RPC base
+	CosmosREST     string // gRPC-gateway REST base
+	CosmosChainID  string // e.g. energychain_9001-1
+	Bech32Prefix   string // e.g. energy
+	NativeDenom    string // e.g. uecy
+	NativeDecimals int    // e.g. 18 (uecy -> ecy)
 }
 
 func Load() *Config {
@@ -37,8 +46,28 @@ func Load() *Config {
 		Router:      strings.ToLower(env("DEX_ROUTER", "")),
 		WECY:        strings.ToLower(env("DEX_WECY", "")),
 		LogLevel:    env("LOG_LEVEL", "info"),
+
+		CosmosEnabled:  envBool("DEX_COSMOS_ENABLED", false),
+		CosmosRPC:      strings.TrimRight(env("DEX_COSMOS_RPC", "http://localhost:26657"), "/"),
+		CosmosREST:     strings.TrimRight(env("DEX_COSMOS_REST", "http://localhost:1317"), "/"),
+		CosmosChainID:  env("DEX_COSMOS_CHAIN_ID", "energychain_9001-1"),
+		Bech32Prefix:   env("DEX_BECH32_PREFIX", "energy"),
+		NativeDenom:    env("DEX_NATIVE_DENOM", "uecy"),
+		NativeDecimals: envInt("DEX_NATIVE_DECIMALS", 18),
 	}
 	return c
+}
+
+func envBool(k string, def bool) bool {
+	if v := os.Getenv(k); v != "" {
+		switch strings.ToLower(v) {
+		case "1", "true", "yes", "on":
+			return true
+		case "0", "false", "no", "off":
+			return false
+		}
+	}
+	return def
 }
 
 func env(k, def string) string {

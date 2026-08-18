@@ -5,7 +5,11 @@ import { displaySymbol, fmtUSD, shortAddr } from '@/lib/format';
 export const revalidate = 10;
 
 export default async function ChartsIndex() {
-  const top = await api.listPairs('volume', 50).catch(() => ({ items: [] as any[] }));
+  const res = await api.listPairs('volume', 50).catch(() => ({ items: [] as any[] }));
+  // The EVM DEX API returns {"items": null} when no AMM pairs are indexed yet
+  // (e.g. EVM layer disabled / no contracts). `.catch` only handles rejections,
+  // so guard against a null payload to avoid a render crash (500).
+  const top = { items: res.items ?? [] };
   return (
     <div className="space-y-4">
       <div className="flex items-end justify-between">

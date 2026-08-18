@@ -26,7 +26,7 @@ export default async function HomePage() {
 
       <section>
         <SectionTitle title="Top pools by TVL" href="/pools" />
-        <PairsTable items={top.items} max={8} />
+        <PairsTable items={top.items ?? []} max={8} />
       </section>
 
       <section>

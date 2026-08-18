@@ -1,8 +1,11 @@
 FROM golang:1.22-alpine AS build
 WORKDIR /src
+# proxy.golang.org is not reachable from this build network; use a mirror that
+# is (same proxy the host's native toolchain uses) so module fetch succeeds.
+ENV GOPROXY=https://goproxy.cn,direct GOSUMDB=off GOTOOLCHAIN=local
 RUN apk add --no-cache git
 COPY go.mod go.sum* ./
-RUN go mod download || true
+RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags='-s -w' -o /out/dex-indexer ./cmd/dex-indexer
 

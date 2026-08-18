@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useAccount, usePublicClient, useWalletClient, useReadContract } from 'wagmi';
 import { maxUint256 } from 'viem';
-import { ADDR } from '@/lib/chain';
+import { ADDR, energyChain } from '@/lib/chain';
 import { ERC20_ABI, ROUTER_ABI } from '@/lib/abi';
 import { displaySymbol, fmtNum, fromBaseUnits, toBaseUnits, shortAddr } from '@/lib/format';
 import { trackTx } from '@/lib/tx-store';
@@ -34,7 +34,7 @@ function TabButton({ on, onClick, children }: any) {
 
 function AddLiquidity({ pair }: { pair: any }) {
   const { address } = useAccount();
-  const wc = useWalletClient().data;
+  const wc = useWalletClient({ chainId: energyChain.id }).data;
   const pc = usePublicClient();
   const [amt0, setAmt0] = useState('');
   const [msg, setMsg] = useState<{ tone: 'ok' | 'err' | 'info'; text: string } | null>(null);
@@ -130,7 +130,7 @@ function AddLiquidity({ pair }: { pair: any }) {
 
 function RemoveLiquidity({ pair }: { pair: any }) {
   const { address } = useAccount();
-  const wc = useWalletClient().data;
+  const wc = useWalletClient({ chainId: energyChain.id }).data;
   const pc = usePublicClient();
   const [pct, setPct] = useState(50);
   const [msg, setMsg] = useState<{ tone: 'ok' | 'err' | 'info'; text: string } | null>(null);

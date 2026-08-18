@@ -44,11 +44,30 @@ var (
 		Help:    "Wall-clock duration of one indexer tick.",
 		Buckets: prometheus.DefBuckets,
 	})
+
+	// Native Cosmos layer.
+	CosmosHeight = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "dex_indexer_cosmos_height",
+		Help: "Highest Cosmos block height indexed.",
+	})
+	CosmosClearsTotal = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "dex_indexer_cosmos_clears_total",
+		Help: "Number of market batch-clear prints ingested.",
+	})
+	CosmosTradesTotal = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "dex_indexer_cosmos_trades_total",
+		Help: "Number of mincast trades ingested.",
+	})
+	CosmosSnapshotErrors = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "dex_indexer_cosmos_snapshot_errors_total",
+		Help: "Number of failed Cosmos entity snapshots.",
+	})
 )
 
 func MustRegister() {
 	prometheus.MustRegister(ChainHead, ProcessedHeight, LastBlockTime, ReorgDepth,
-		Pairs, SwapsTotal, LiquidityTotal, TickDuration)
+		Pairs, SwapsTotal, LiquidityTotal, TickDuration,
+		CosmosHeight, CosmosClearsTotal, CosmosTradesTotal, CosmosSnapshotErrors)
 }
 
 // Serve starts the /metrics endpoint and blocks. Call in a goroutine.

@@ -4,18 +4,44 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from 'wagmi';
+import {
+  CandlestickChart,
+  Coins,
+  Waves,
+  Rocket,
+  ArrowLeftRight,
+  Zap,
+  CirclePlus,
+  Wallet,
+  ChevronDown,
+  Menu,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { energyChain } from '@/lib/chain';
 import { shortAddr } from '@/lib/format';
 import { GlobalSearch } from './global-search';
 import { useWSStatus } from '@/lib/ws';
+import { CosmosConnect } from './cosmos-connect';
 
-const NAV = [
+// Native Cosmos modules are the primary surface; the legacy EVM Uniswap pages
+// (Swap/Pools/Tokens/Charts/Farm) live under the "DEX (EVM)" group.
+const NAV: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: '/trade', label: 'Trade', icon: CandlestickChart },
+  { href: '/assets', label: 'Assets', icon: Coins },
+  { href: '/mincast', label: 'Mincast', icon: Waves },
+  { href: '/offerings', label: 'Offerings', icon: Rocket },
+  { href: '/bridge', label: 'Bridge', icon: ArrowLeftRight },
+  { href: '/energy', label: 'Energy', icon: Zap },
+  { href: '/issue', label: 'Issue', icon: CirclePlus },
+  { href: '/portfolio', label: 'Portfolio', icon: Wallet },
+];
+
+const NAV_EVM = [
   { href: '/swap', label: 'Swap' },
   { href: '/pools', label: 'Pools' },
   { href: '/tokens', label: 'Tokens' },
   { href: '/charts', label: 'Charts' },
   { href: '/wallet', label: 'Wallet' },
-  { href: '/portfolio', label: 'Portfolio' },
   { href: '/farm', label: 'Farm' },
   { href: '/api-keys', label: 'API keys' },
 ];
@@ -30,24 +56,27 @@ export function Header() {
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-energy-400 to-energy-600 text-ink-950 font-black">
             ⚡
           </span>
-          <span className="text-base font-semibold tracking-tight hidden xs:inline sm:inline">EnergySwap</span>
-          <span className="chip ml-1 hidden md:inline-flex">v1 · UniV2</span>
+          <span className="text-base font-semibold tracking-tight hidden xs:inline sm:inline">EnergyChain</span>
+          <span className="chip ml-1 hidden md:inline-flex">RWA · DEX</span>
         </Link>
         <nav className="hidden lg:flex items-center gap-1">
           {NAV.map((n) => {
             const active = pathname === n.href || pathname.startsWith(n.href + '/');
+            const Icon = n.icon;
             return (
               <Link
                 key={n.href}
                 href={n.href}
-                className={`rounded-lg px-3 py-1.5 text-sm transition ${
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition ${
                   active ? 'bg-white/10 text-ink-100' : 'text-ink-300 hover:text-ink-100 hover:bg-white/5'
                 }`}
               >
+                <Icon size={14} className={active ? 'text-energy-400' : 'text-ink-500'} />
                 {n.label}
               </Link>
             );
           })}
+          <EvmMenu pathname={pathname} />
         </nav>
         <div className="ml-auto flex items-center gap-2 min-w-0">
           <div className="hidden md:block w-72 xl:w-96">
@@ -55,6 +84,7 @@ export function Header() {
           </div>
           <LivePill />
           <ChainPill />
+          <CosmosConnect />
           <ConnectButton />
           <button
             className="lg:hidden btn-ghost px-2"
@@ -62,9 +92,7 @@ export function Header() {
             aria-expanded={open}
             onClick={() => setOpen((s) => !s)}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 6h18M3 12h18M3 18h18" />
-            </svg>
+            <Menu size={18} />
           </button>
         </div>
       </div>
@@ -75,6 +103,24 @@ export function Header() {
           </div>
           <div className="px-4 py-2">
             {NAV.map((n) => {
+              const active = pathname === n.href || pathname.startsWith(n.href + '/');
+              const Icon = n.icon;
+              return (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  onClick={() => setOpen(false)}
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm ${
+                    active ? 'bg-white/10 text-ink-100' : 'text-ink-200 hover:bg-white/5'
+                  }`}
+                >
+                  <Icon size={15} className={active ? 'text-energy-400' : 'text-ink-500'} />
+                  {n.label}
+                </Link>
+              );
+            })}
+            <div className="mt-2 border-t border-white/5 pt-2 text-[11px] uppercase tracking-wide text-ink-500 px-3">DEX (EVM)</div>
+            {NAV_EVM.map((n) => {
               const active = pathname === n.href || pathname.startsWith(n.href + '/');
               return (
                 <Link
@@ -93,6 +139,38 @@ export function Header() {
         </div>
       )}
     </header>
+  );
+}
+
+function EvmMenu({ pathname }: { pathname: string }) {
+  const [open, setOpen] = useState(false);
+  const active = NAV_EVM.some((n) => pathname === n.href || pathname.startsWith(n.href + '/'));
+  return (
+    <div className="relative" onMouseLeave={() => setOpen(false)}>
+      <button
+        onClick={() => setOpen((s) => !s)}
+        onMouseEnter={() => setOpen(true)}
+        className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm transition ${
+          active ? 'bg-white/10 text-ink-100' : 'text-ink-300 hover:text-ink-100 hover:bg-white/5'
+        }`}
+      >
+        DEX (EVM) <ChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 mt-1 w-44 card overflow-hidden z-40">
+          {NAV_EVM.map((n) => (
+            <Link
+              key={n.href}
+              href={n.href}
+              onClick={() => setOpen(false)}
+              className="block px-3 py-2 text-sm text-ink-200 hover:bg-white/5"
+            >
+              {n.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

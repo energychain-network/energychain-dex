@@ -70,4 +70,29 @@ html, body {
   }
   .mono { font-family: var(--font-mono, 'JetBrains Mono'), ui-monospace, monospace; }
   .divider { @apply border-t border-white/5; }
+
+  /* Page-header icon plate: a soft gradient square that anchors each page. */
+  .icon-plate {
+    @apply grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-energy-500/20
+           bg-gradient-to-br from-energy-500/15 to-energy-600/5 text-energy-400;
+  }
+
+  /* Data-table primitives shared by every listing page. */
+  .th {
+    @apply px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-ink-500;
+  }
+  .tr-row {
+    @apply border-t border-white/5 transition-colors hover:bg-white/[0.03];
+  }
+  .td { @apply px-4 py-3.5; }
+
+  /* Pill-style tab strip. */
+  .tabstrip {
+    @apply flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs;
+  }
+  .tab-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors;
+  }
+  .tab-pill-on  { @apply tab-pill bg-white/10 text-ink-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]; }
+  .tab-pill-off { @apply tab-pill text-ink-400 hover:text-ink-100 hover:bg-white/5; }
 }
