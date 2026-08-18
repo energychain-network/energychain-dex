@@ -24,7 +24,20 @@ const GRANS = [
   { id: '1w', label: '1W' },
 ];
 
-export function TradingView({ pairAddress, initialCandles }: { pairAddress: string; initialCandles: Candle[] }) {
+export function TradingView({
+  pairAddress,
+  initialCandles,
+  quoteInverted = false,
+}: {
+  pairAddress: string;
+  initialCandles: Candle[];
+  // The indexer stores every candle as token1-per-token0. Uniswap orders a
+  // pair's tokens by address, so which side that puts on top is arbitrary: for
+  // the ECY pools it lands on "ECY per USDT", a series that falls while ECY
+  // appreciates and contradicts the USD price shown beside the chart. Set this
+  // to plot the reciprocal, quoting ECY in the asset it trades against.
+  quoteInverted?: boolean;
+}) {
   const chartRef = useRef<HTMLDivElement>(null);
   const [chart, setChart] = useState<IChartApi | null>(null);
   const [priceSeries, setPriceSeries] = useState<ISeriesApi<'Candlestick'> | null>(null);
@@ -75,24 +88,35 @@ export function TradingView({ pairAddress, initialCandles }: { pairAddress: stri
     api.candles(pairAddress, granularity, 500).then((r) => setCandles(r.items)).catch(() => {});
   }, [pairAddress, granularity]);
 
-  // Push data into the series.
+  // Push data into the series. Inversion happens here rather than on the stored
+  // candles so the WebSocket path below keeps working in the indexer's own price
+  // space. Taking reciprocals swaps the extremes — the lowest rate is the
+  // highest price — so high and low trade places.
   useEffect(() => {
     if (!priceSeries || !volSeries || !candles) return;
-    const cdata: CandlestickData[] = candles.map((c) => ({
-      time: c.t as Time,
-      open: Number(c.o),
-      high: Number(c.h),
-      low: Number(c.l),
-      close: Number(c.c),
+    const shaped = candles.map((c) => {
+      const o = Number(c.o), h = Number(c.h), l = Number(c.l), cl = Number(c.c);
+      const flip = quoteInverted && o > 0 && h > 0 && l > 0 && cl > 0;
+      return {
+        time: c.t as Time,
+        open: flip ? 1 / o : o,
+        high: flip ? 1 / l : h,
+        low: flip ? 1 / h : l,
+        close: flip ? 1 / cl : cl,
+        volume: Number(c.v_usd) || Number(c.v),
+      };
+    });
+    const cdata: CandlestickData[] = shaped.map(({ time, open, high, low, close }) => ({
+      time, open, high, low, close,
     }));
-    const vdata: HistogramData[] = candles.map((c) => ({
-      time: c.t as Time,
-      value: Number(c.v_usd) || Number(c.v),
-      color: Number(c.c) >= Number(c.o) ? 'rgba(34,197,164,0.45)' : 'rgba(246,71,123,0.45)',
+    const vdata: HistogramData[] = shaped.map((c) => ({
+      time: c.time,
+      value: c.volume,
+      color: c.close >= c.open ? 'rgba(34,197,164,0.45)' : 'rgba(246,71,123,0.45)',
     }));
     priceSeries.setData(cdata);
     volSeries.setData(vdata);
-  }, [priceSeries, volSeries, candles]);
+  }, [priceSeries, volSeries, candles, quoteInverted]);
 
   // Live update: append/update the last candle from WebSocket swap events.
   // This keeps the chart in sync with the indexer without re-fetching.
